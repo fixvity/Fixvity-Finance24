@@ -76,23 +76,13 @@ button{
   background:#e5e7eb;
   border-radius:999px;
   overflow:hidden;
-  margin-bottom:12px
+  margin-bottom:18px
 }
 .progress-fill{
   height:100%;
   width:0%;
   background:linear-gradient(90deg,var(--danger),var(--success));
-  transition:.5s
-}
-
-.warning{
-  background:#fff7ed;
-  color:#b45309;
-  padding:10px;
-  border-radius:10px;
-  font-size:13px;
-  margin-bottom:12px;
-  display:none
+  transition:.6s
 }
 
 table{
@@ -137,7 +127,6 @@ th:first-child,td:first-child{text-align:left}
     <select id="frequency">
       <option value="weekly">Weekly</option>
       <option value="biweekly">Bi-Weekly</option>
-      <option value="semimonthly">Semi-Monthly</option>
       <option value="monthly">Monthly</option>
     </select>
   </div>
@@ -145,42 +134,49 @@ th:first-child,td:first-child{text-align:left}
   <div class="section">
     <h3>Income</h3>
     <label>Gross Paycheck</label>
-    <input id="gross" value="2000" type="number">
+    <input id="gross" type="number" value="2000">
     <label>Deductions / Taxes</label>
-    <input id="deductions" value="400" type="number">
+    <input id="tax" type="number" value="400">
   </div>
 
   <div class="section">
     <h3>Expenses (Per Paycheck)</h3>
-    <input id="rent" placeholder="Rent / Housing" value="600">
-    <input id="utilities" placeholder="Utilities" value="150">
-    <input id="food" placeholder="Food / Groceries" value="250">
-    <input id="transport" placeholder="Transport" value="120">
-    <input id="other" placeholder="Other Expenses" value="100">
+
+    <label>Rent / Housing</label>
+    <input id="rent" type="number" value="600">
+
+    <label>Utilities</label>
+    <input id="utilities" type="number" value="150">
+
+    <label>Food</label>
+    <input id="food" type="number" value="250">
+
+    <label>Transport</label>
+    <input id="transport" type="number" value="120">
+
+    <label>Other Expenses</label>
+    <input id="other" type="number" value="100">
   </div>
 
   <div class="section">
     <h3>Savings</h3>
     <label>Planned Savings</label>
-    <input id="savings" value="300">
+    <input id="savings" type="number" value="300">
   </div>
 
   <button class="primary" onclick="calculate()">Calculate Budget</button>
   <button class="secondary" onclick="location.reload()">Reset</button>
+
 </div>
 
 <!-- RIGHT -->
 <div class="card">
 
-  <div class="warning" id="warn">
-    ⚠️ Your expenses exceed your paycheck. Adjust spending or savings.
-  </div>
-
   <div class="results">
-    <div class="result"><b id="net">–</b><small>Net Paycheck</small></div>
-    <div class="result"><b id="expenses">–</b><small>Total Expenses</small></div>
-    <div class="result"><b id="save">–</b><small>Savings</small></div>
-    <div class="result"><b id="left">–</b><small>Surplus / Deficit</small></div>
+    <div class="result"><b id="netPay">–</b><small>Net Paycheck</small></div>
+    <div class="result"><b id="totalExp">–</b><small>Total Expenses</small></div>
+    <div class="result"><b id="saveOut">–</b><small>Savings</small></div>
+    <div class="result"><b id="surplus">–</b><small>Surplus / Deficit</small></div>
   </div>
 
   <div class="progress-bar">
@@ -195,6 +191,7 @@ th:first-child,td:first-child{text-align:left}
 
   <br>
   <button class="dark" onclick="window.print()">🖨 Print / Export PDF</button>
+
 </div>
 
 </div>
@@ -202,40 +199,35 @@ th:first-child,td:first-child{text-align:left}
 
 <script>
 const $ = id => document.getElementById(id);
-const num = id => +($(id).value || 0);
-const money = n =>
-  new Intl.NumberFormat("en-US",{
+
+function money(n){
+  return new Intl.NumberFormat("en-US",{
     style:"currency",
     currency:$("currency").value
   }).format(n);
+}
 
 function calculate(){
-  $("warn").style.display="none";
+  const gross = +$("gross").value;
+  const tax = +$("tax").value;
 
-  const gross = num("gross");
-  const deductions = num("deductions");
-  const net = gross - deductions;
+  const rent = +$("rent").value;
+  const utilities = +$("utilities").value;
+  const food = +$("food").value;
+  const transport = +$("transport").value;
+  const other = +$("other").value;
+  const savings = +$("savings").value;
 
-  const rent = num("rent");
-  const utilities = num("utilities");
-  const food = num("food");
-  const transport = num("transport");
-  const other = num("other");
-  const savings = num("savings");
+  const net = gross - tax;
+  const expenses = rent + utilities + food + transport + other;
+  const surplus = net - expenses - savings;
 
-  const totalExpenses = rent + utilities + food + transport + other + savings;
-  const remaining = net - totalExpenses;
+  $("netPay").textContent = money(net);
+  $("totalExp").textContent = money(expenses);
+  $("saveOut").textContent = money(savings);
+  $("surplus").textContent = money(surplus);
 
-  $("net").textContent = money(net);
-  $("expenses").textContent = money(totalExpenses - savings);
-  $("save").textContent = money(savings);
-  $("left").textContent = money(remaining);
-
-  if(remaining < 0){
-    $("warn").style.display="block";
-  }
-
-  const usedPercent = Math.min(100, Math.max(0,(totalExpenses/net)*100));
+  const usedPercent = Math.min(100, Math.max(0, ((expenses + savings) / net) * 100));
   $("progress").style.width = usedPercent + "%";
 
   $("table").innerHTML = `
@@ -243,7 +235,7 @@ function calculate(){
     <tr><td>Utilities</td><td>${money(utilities)}</td></tr>
     <tr><td>Food</td><td>${money(food)}</td></tr>
     <tr><td>Transport</td><td>${money(transport)}</td></tr>
-    <tr><td>Other</td><td>${money(other)}</td></tr>
+    <tr><td>Other Expenses</td><td>${money(other)}</td></tr>
     <tr><td><b>Savings</b></td><td><b>${money(savings)}</b></td></tr>
   `;
 }
