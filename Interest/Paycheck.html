@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paycheck Budget Calculator – Pro</title>
+
+<style>
+:root{
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --primary:#2563eb;
+  --success:#16a34a;
+  --danger:#ef4444;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#e5e7eb;
+  --radius:16px;
+  --shadow:0 14px 36px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Arial;
+  background:var(--bg);
+  color:var(--text);
+}
+h1{text-align:center;color:var(--primary);margin:22px 0}
+.container{max-width:1200px;margin:auto;padding:16px}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:28px}
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px;
+}
+.section{margin-bottom:22px}
+.section h3{margin-bottom:12px;color:var(--primary)}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+input,select{
+  width:100%;
+  padding:11px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  font-size:14px;
+  margin-bottom:10px
+}
+button{
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer
+}
+.primary{background:var(--primary);color:#fff}
+.secondary{background:#eef2ff}
+.dark{background:#111827;color:#fff}
+
+.results{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:18px
+}
+.result{
+  background:#f8fafc;
+  border-radius:14px;
+  padding:14px;
+  text-align:center
+}
+.result b{display:block;font-size:18px}
+.result small{font-size:12px;color:var(--muted)}
+
+.progress-bar{
+  height:14px;
+  background:#e5e7eb;
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:12px
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--danger),var(--success));
+  transition:.5s
+}
+
+.warning{
+  background:#fff7ed;
+  color:#b45309;
+  padding:10px;
+  border-radius:10px;
+  font-size:13px;
+  margin-bottom:12px;
+  display:none
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px
+}
+th,td{
+  padding:10px;
+  border-bottom:1px solid var(--border);
+  text-align:right
+}
+th:first-child,td:first-child{text-align:left}
+
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .results{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+
+<body>
+<h1>💰 Paycheck Budget Calculator – Pro</h1>
+
+<div class="container">
+<div class="grid">
+
+<!-- LEFT -->
+<div class="card">
+
+  <div class="section">
+    <h3>Paycheck Settings</h3>
+    <label>Currency</label>
+    <select id="currency">
+      <option value="USD">USD ($)</option>
+      <option value="EUR">EUR (€)</option>
+      <option value="GBP">GBP (£)</option>
+      <option value="INR">INR (₹)</option>
+    </select>
+
+    <label>Pay Frequency</label>
+    <select id="frequency">
+      <option value="weekly">Weekly</option>
+      <option value="biweekly">Bi-Weekly</option>
+      <option value="semimonthly">Semi-Monthly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <h3>Income</h3>
+    <label>Gross Paycheck</label>
+    <input id="gross" value="2000" type="number">
+    <label>Deductions / Taxes</label>
+    <input id="deductions" value="400" type="number">
+  </div>
+
+  <div class="section">
+    <h3>Expenses (Per Paycheck)</h3>
+    <input id="rent" placeholder="Rent / Housing" value="600">
+    <input id="utilities" placeholder="Utilities" value="150">
+    <input id="food" placeholder="Food / Groceries" value="250">
+    <input id="transport" placeholder="Transport" value="120">
+    <input id="other" placeholder="Other Expenses" value="100">
+  </div>
+
+  <div class="section">
+    <h3>Savings</h3>
+    <label>Planned Savings</label>
+    <input id="savings" value="300">
+  </div>
+
+  <button class="primary" onclick="calculate()">Calculate Budget</button>
+  <button class="secondary" onclick="location.reload()">Reset</button>
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+
+  <div class="warning" id="warn">
+    ⚠️ Your expenses exceed your paycheck. Adjust spending or savings.
+  </div>
+
+  <div class="results">
+    <div class="result"><b id="net">–</b><small>Net Paycheck</small></div>
+    <div class="result"><b id="expenses">–</b><small>Total Expenses</small></div>
+    <div class="result"><b id="save">–</b><small>Savings</small></div>
+    <div class="result"><b id="left">–</b><small>Surplus / Deficit</small></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress"></div>
+  </div>
+
+  <h3>Budget Breakdown</h3>
+  <table>
+    <tr><th>Category</th><th>Amount</th></tr>
+    <tbody id="table"></tbody>
+  </table>
+
+  <br>
+  <button class="dark" onclick="window.print()">🖨 Print / Export PDF</button>
+</div>
+
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const num = id => +($(id).value || 0);
+const money = n =>
+  new Intl.NumberFormat("en-US",{
+    style:"currency",
+    currency:$("currency").value
+  }).format(n);
+
+function calculate(){
+  $("warn").style.display="none";
+
+  const gross = num("gross");
+  const deductions = num("deductions");
+  const net = gross - deductions;
+
+  const rent = num("rent");
+  const utilities = num("utilities");
+  const food = num("food");
+  const transport = num("transport");
+  const other = num("other");
+  const savings = num("savings");
+
+  const totalExpenses = rent + utilities + food + transport + other + savings;
+  const remaining = net - totalExpenses;
+
+  $("net").textContent = money(net);
+  $("expenses").textContent = money(totalExpenses - savings);
+  $("save").textContent = money(savings);
+  $("left").textContent = money(remaining);
+
+  if(remaining < 0){
+    $("warn").style.display="block";
+  }
+
+  const usedPercent = Math.min(100, Math.max(0,(totalExpenses/net)*100));
+  $("progress").style.width = usedPercent + "%";
+
+  $("table").innerHTML = `
+    <tr><td>Rent / Housing</td><td>${money(rent)}</td></tr>
+    <tr><td>Utilities</td><td>${money(utilities)}</td></tr>
+    <tr><td>Food</td><td>${money(food)}</td></tr>
+    <tr><td>Transport</td><td>${money(transport)}</td></tr>
+    <tr><td>Other</td><td>${money(other)}</td></tr>
+    <tr><td><b>Savings</b></td><td><b>${money(savings)}</b></td></tr>
+  `;
+}
+
+calculate();
+</script>
+</body>
+</html>
